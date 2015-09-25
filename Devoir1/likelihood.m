@@ -8,11 +8,13 @@ function lklh = likelihood(x, theta)
     Sigma = a'*a;
     m = mu - diag(Sigma)/2;
     
-    lklh = n*d/2*log(2*pi*h) + n/2*log(abs(det(Sigma)));
+    lklh = n*d/2*log(2*pi*h) + n/2*log(det(Sigma));
     
-    %invSigma = inv(Sigma);
+    lklh2 = 0;
     for i=1:n
         v = (x(i,:)'-h*m);
-        lklh = lklh + v'*(Sigma\v);
+        lklh2 = lklh2 + v'*(Sigma\v);
     end
+
+    lklh = lklh+lklh2/(2*h);
 end
