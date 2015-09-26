@@ -1,5 +1,5 @@
 % Test.m
-d = 1;
+d = 2;
 n = 5000;
 h = 1/252;
 
@@ -31,4 +31,4 @@ X = h*ones(n,1)*(mu - vol.^2/2)' - sqrt(h)*Z*a;
 
 S = 100*exp(cumsum(X));
 
-[muEst, aEst, V, muError, aError, vError] = parameterEstimation(S);
+%[muEst, aEst, V, muError, aError, vError] = parameterEstimation(S);

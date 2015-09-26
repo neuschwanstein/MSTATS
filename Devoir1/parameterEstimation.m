@@ -1,7 +1,7 @@
 function [mu, a, V, muError, aError, vError] = parameterEstimation(S)
     %% Housekeeping
     X = log(S(2:end,:)) - log(S(1:end-1,:));
-    [~,d] = size(X);
+    [n,d] = size(X);
     lklh = @(theta) likelihood(X,theta);
     
     %% Initialization
@@ -10,12 +10,17 @@ function [mu, a, V, muError, aError, vError] = parameterEstimation(S)
     theta0 = toTheta(d,mu0,cov0);
     
     %% Optimization
-    theta = fminunc(lklh,theta0);
+    [theta,~,~,~,~,H] = fminunc(lklh,theta0); % H=hessian(theta)
     
-    %% Profit
+    %% Estimators
     [mu, a] = fromTheta(d,theta);
-    V = zeros(2);
-    muError = 0;
-    aError = 0;
-    vError = 0;
+    
+    %% Error estimation
+    I = H/n;
+    J = jacobian(d,theta);
+    V = J*(I\J);
+    
+    muError = sqrt(V(1:d)/n);
+    vError = sqrt(V(d+1:end)/n);
+    aError = 0; % :(
 end
