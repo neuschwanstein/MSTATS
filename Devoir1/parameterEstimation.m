@@ -1,4 +1,6 @@
-function [mu, a, V, muError, aError, vError] = parameterEstimation(S)
+function [mu, a, V, muError, aError] = parameterEstimation(S)
+    % Do we also need values for correlation and errors? (as shown on p.40)
+    
     %% Housekeeping
     X = log(S(2:end,:)) - log(S(1:end-1,:));
     [n,d] = size(X);
@@ -20,7 +22,8 @@ function [mu, a, V, muError, aError, vError] = parameterEstimation(S)
     J = jacobian(d,theta);
     V = J*(I\J);
     
-    muError = sqrt(V(1:d)/n);
-    vError = sqrt(V(d+1:end)/n);
-    aError = 0; % :(
+    diagV = diag(V);
+    muError = 1.96*sqrt(diagV(1:d)/n);
+    aError = triu(ones(d));
+    aError(aError == 1) = 1.96*sqrt(diagV(d+1:end)/n);
 end
