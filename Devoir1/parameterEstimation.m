@@ -12,7 +12,8 @@ function [mu, a, V, muError, aError] = parameterEstimation(S)
     theta0 = toTheta(d,mu0,cov0);
     
     %% Optimization
-    [theta,~,~,~,~,H] = fminunc(lklh,theta0); % H=hessian(theta)
+    options = optimoptions('fminunc','MaxFunEvals',12000);
+    [theta,~,~,~,~,H] = fminunc(lklh,theta0,options); % H=hessian(theta)
     
     %% Estimators
     [mu, a] = fromTheta(d,theta);

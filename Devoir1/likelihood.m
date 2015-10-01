@@ -10,10 +10,14 @@ function lklh = likelihood(x, theta)
     
     lklh = n*d/2*log(2*pi*h) + n/2*log(det(Sigma));
     
+    invA = inv(a);
+    SigmaInv = invA*invA';
+    
     lklh2 = 0;
     for i=1:n
         v = (x(i,:)'-h*m);
-        lklh2 = lklh2 + v'*(Sigma\v);
+%         lklh2 = lklh2 + v'*(Sigma\v);
+        lklh2 = lklh2 + v'*SigmaInv*v;
     end
 
     lklh = lklh+lklh2/(2*h);
