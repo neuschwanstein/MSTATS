@@ -7,6 +7,6 @@ T = linspace(T,0,n);
 phi = blsdelta(S(1:end-1),K,r,T(1:end-1),sigma);
 V0 = blsprice(S(1),K,r,T(1),sigma);
 
-V = V0' + phi'*Delta;
+V = V0' + phi'*Delta;           % Illegal hack: V0=[V0Call,V0Put], same for phi
 V = V(put + 1);                 % Illegal hack !!
 end
