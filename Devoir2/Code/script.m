@@ -27,8 +27,8 @@ R = mup -rp +sigmap*randn(N,1);  %Gaussian excess returns
 
 C0 = interpolation_1d(S0,C(1,:)',minS,maxS);
 phi = (interpolation_1d(S0,a(1,:)',minS,maxS)-C0*c1)/S0;
-[Call, Put] = blsprice(S0,K,r,T,sigma);
-[Call_D, Put_D] = blsdelta(S0,K,r,T,sigma);
+[Call, Put] = blspricem(S0,K,r,T,sigma);
+[Call_D, Put_D] = blsdeltam(S0,K,r,T,sigma);
 
 if(put)
     fprintf('Phi (Opt) = %g  Phi (B&S) = %g  \n', phi, Put_D);
@@ -38,8 +38,8 @@ else
     fprintf('Put (Opt) = %g  Put (B&S) = %g  \n', C0, Call);
 end
 
-[CallBS,PutBS] =  blsprice(S, K, r, T, sigma);
-[PhiBS,Phi1BS] =  blsdelta(S, K, r, T, sigma);
+[CallBS,PutBS] =  blspricem(S, K, r, T, sigma);
+[PhiBS,Phi1BS] =  blsdeltam(S, K, r, T, sigma);
 
 if(put)
     figure
