@@ -13,8 +13,10 @@ V = hedging(S,K,r,T,mu,sigma,put);
 putValue = exp(-r*T)*max(K-S(end,:)',0);
 
 % h = histogram(putValue-V,'Normalization','pdf');
-p = drawDensity(putValue-V);
-mu = putValue-V;
+% p = drawDensity(putValue-V);
+[y,x] = ksdensity(putValue-V);
+plot(x,y);
+mu = mean(putValue-V)
 vol = sqrt(var(putValue-V));
 
 
