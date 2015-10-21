@@ -7,9 +7,9 @@ maxS = 120.0;
 S0 = 100.0;
 K  = 100.0;
 T  = 1.0;
-r  = 0.05;
-sigma = 0.06;
-mu = 0.09;
+r  = 0.02;
+sigma = 0.2;
+mu = 0.3;
 alpha =1.0;
 beta = 0.0;
 put = 1;
@@ -26,7 +26,8 @@ R = mup -rp +sigmap*randn(N,1);  %Gaussian excess returns
 [S,C,a,c1,Phi1] = Hedging_IID_MC2012(R,T,K,r,n,put,minS,maxS,m);
 
 C0 = interpolation_1d(S0,C(1,:)',minS,maxS);
-phi = (interpolation_1d(S0,a(1,:)',minS,maxS)-C0*c1)/S0;
+ak = interpolation_1d(S0,a(1,:)',minS,maxS);
+phi = (ak - C0*c1)/S0;
 [Call, Put] = blspricem(S0,K,r,T,sigma);
 [Call_D, Put_D] = blsdeltam(S0,K,r,T,sigma);
 

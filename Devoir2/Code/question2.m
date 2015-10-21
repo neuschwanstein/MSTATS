@@ -5,7 +5,7 @@ r=0.02;
 K=100;
 sigma=0.2;
 n=252;
-N=100;
+N=10000;
 put = true;
 
 S = generateBSPrices(S0,mu,sigma,T,n,N);
@@ -21,3 +21,4 @@ optPutValue = optHedging(S,K,r,T,mu,sigma,put);
 hold on
 plot(xDelta,yDelta);
 plot(xOpt,yOpt);
+legend('Delta-Hedging','Optimal Hedging')

@@ -1,30 +1,31 @@
-function V = optHedging(X,K,r,T,mu,sigma,put)
+function V = optHedging(S,K,r,T,mu,sigma,put)
 m = 2000;
-[n,N] = size(X);
-% h = T/n;
+[n,N] = size(S);
+h = T/n;
 beta = diag(exp(-r*linspace(0,T,n)));
-X = beta*X;  
-Delta = X(2:end,:) - X(1:end-1,:);
-R = log(X(2:end,:)./X(1:end-1,:));
+S = beta*S;  
+Delta = S(2:end,:) - S(1:end-1,:);
+% R = log(S(2:end,:)./S(1:end-1,:));
 % R = log(X(2:end,:)./X(1:end-1,:)) - h*r;
 
+mean = h*(mu - r - sigma^2/2);
+vol = sqrt(h)*sigma;
+R = normrnd(mean,vol,10000,1);
+
+minS = min(min(S));
+maxS = max(max(S));
+[x,C,a,c1,phi1] = Hedging_IID_MC2012(R,T,K,r,n,put,minS,maxS,m);
+
 V = zeros(N,1);
+V0 = interpolation_1d(S(1,1),C(1,:)',minS,maxS);
+    
 for i=1:N
-    minS = min(X(:,i));
-    maxS = max(X(:,i));
-    
-    echo off;
-    [~,C,a,c1,~] = Hedging_IID_MC2012(R(:,i),T,K,r,n,put,minS,maxS,m);
-    echo on;
-    fprintf('%d out of %d\n',i,N);
-    
-    V0 = interpolation_1d(X(1,i),C(1,:)',minS,maxS);
     pi = V0;    % Matlab is such a bad language, you can redefine pi
     
-    for k=2:n-1
-        ak = interpolation_1d(X(k-1,i),a(k-1,:)',minS,maxS);
-        phi = (ak - c1*pi)/X(k-1,i);
-        pi = phi*Delta(k,i);
+    for k=1:n-1
+        ak = interpolation_1d(S(k,i),a(k,:)',minS,maxS);
+        phi = (ak - c1*pi)/S(k,i);
+        pi = pi + phi*Delta(k,i);
     end
     
     V(i) = pi;
