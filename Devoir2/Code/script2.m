@@ -5,19 +5,17 @@ r=0.02;
 K=100;
 sigma=0.2;
 n=252;
-N=50000;
+N=10000;
 put = true;
 
-nExperiments=100;
-meanResults = zeros(nExperiments,1);
+putValue = exp(-r*T)*max(K-S(end,:)',0);
 
-for i = 1:nExperiments
-    S = generatePrices(S0,mu,sigma,T,n,N);
-    V = hedging(S,K,r,T,mu,sigma,put);
-    putValue = exp(-r*T)*max(K-S(end,:)',0);
-    meanResults(i) = mean(putValue-V);
-end
-% [~,putPrice] = blspricem(S(end,:)',K,r,T,sigma);
-% putPrice = exp(-r*T)*putPrice;
-% 
-% hist(V-putPrice)
+R = log(S(2:end,:)./S(1:end-1,:)) - r;
+minS = 0.9*min(S(:,1));
+maxS = 1.1*max(S(:,1));
+m = 2000;
+[~,optPutValue,~,~] = Hedging_IID_MC2012(R(:,1),T,K,r,n,put,minS,maxS,m);
+optPutValue = optPutValue(1,:)';
+
+x = linspace(minS,maxS,m);
+plot(x,optPutValue);

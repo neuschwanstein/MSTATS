@@ -5,22 +5,19 @@ r=0.02;
 K=100;
 sigma=0.2;
 n=252;
-N=50000;
+N=100;
 put = true;
 
-S = generatePrices(S0,mu,sigma,T,n,N);
-V = hedging(S,K,r,T,mu,sigma,put);
+S = generateBSPrices(S0,mu,sigma,T,n,N);
 putValue = exp(-r*T)*max(K-S(end,:)',0);
 
-% h = histogram(putValue-V,'Normalization','pdf');
-% p = drawDensity(putValue-V);
-[y,x] = ksdensity(putValue-V);
-plot(x,y);
-mu = mean(putValue-V)
-vol = sqrt(var(putValue-V));
+deltaPutValue = hedging(S,K,r,T,mu,sigma,put);
+optPutValue = optHedging(S,K,r,T,mu,sigma,put);
 
 
-% [~,putPrice] = blspricem(S(end,:)',K,r,T,sigma);
-% putPrice = exp(-r*T)*putPrice;
-% 
-% hist(V-putPrice)
+[yDelta,xDelta] = ksdensity(putValue-deltaPutValue);
+[yOpt,xOpt] = ksdensity(putValue-optPutValue);
+
+hold on
+plot(xDelta,yDelta);
+plot(xOpt,yOpt);
