@@ -6,7 +6,7 @@ beta = diag(exp(-r*linspace(0,T,n)));
 S = beta*S;  
 Delta = S(2:end,:) - S(1:end-1,:);
 
-nTraining = 10000;
+nTraining = 100;
 if ~gamma
     % BMS 
     mean = h*(mu - r - sigma^2/2);

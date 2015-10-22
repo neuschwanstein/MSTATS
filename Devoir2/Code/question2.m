@@ -8,11 +8,18 @@ n=252;
 N=10000;
 put = true;
 
-S = generateBSPrices(S0,mu,sigma,T,n,N);
+gammaVariance = false;
+
+if ~gammaVariance
+    S = generateBSPrices(S0,mu,sigma,T,n,N);
+else
+    S = generateGammaPrices(S0,mu,sigma,T,n,N);
+end
+
 putValue = exp(-r*T)*max(K-S(end,:)',0);
 
 deltaPutValue = hedging(S,K,r,T,mu,sigma,put);
-optPutValue = optHedging(S,K,r,T,mu,sigma,put);
+optPutValue = optHedging(S,K,r,T,mu,sigma,put,gammaVariance);
 
 [yDelta,xDelta] = ksdensity(putValue-deltaPutValue);
 [yOpt,xOpt] = ksdensity(putValue-optPutValue);
