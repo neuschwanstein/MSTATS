@@ -6,7 +6,7 @@ beta = diag(exp(-r*linspace(0,T,n)));
 S = beta*S;  
 Delta = S(2:end,:) - S(1:end-1,:);
 
-nTraining = 100;
+nTraining = 10000;
 if ~gamma
     % BMS 
     mean = h*(mu - r - sigma^2/2);
@@ -24,7 +24,6 @@ end
 minS = min(min(S));
 maxS = max(max(S));
 [~,C,a,c1,~] = Hedging_IID_MC2012(R,T,K,r,n,put,minS,maxS,m);
-
 V = zeros(N,1);
 V0 = interpolation_1d(S(1,1),C(1,:)',minS,maxS);
     

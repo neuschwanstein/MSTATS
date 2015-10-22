@@ -6,7 +6,7 @@ K=100;
 sigma=0.2;
 n=252;
 N=10000;
-put = true;
+put = 1;
 
 gammaVariance = false;
 
