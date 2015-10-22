@@ -14,7 +14,6 @@ putValue = exp(-r*T)*max(K-S(end,:)',0);
 deltaPutValue = hedging(S,K,r,T,mu,sigma,put);
 optPutValue = optHedging(S,K,r,T,mu,sigma,put);
 
-
 [yDelta,xDelta] = ksdensity(putValue-deltaPutValue);
 [yOpt,xOpt] = ksdensity(putValue-optPutValue);
 
