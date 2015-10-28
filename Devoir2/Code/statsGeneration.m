@@ -9,10 +9,12 @@ function [] = statsGeneration(filename,deltaResults,optResults)
 
 
 stats_name = {'Moyenne','Médiane','Volatilité'};
-stats_name2 = {'Asymétrie','Kurtose','Max.','Min.'};
+stats_name2 = {'Asymétrie','Kurtose','Max.'};
+stats_name3 = {'Min.','VaR 99\\%%', 'RMSE'};
 
 functions = {@mean,@median,@std};
-functions2 = {@skewness,@kurtosis,@max,@min};
+functions2 = {@skewness,@kurtosis,@max};
+functions3 = {@min, @(d) quantile(d,0.99), @(d) sqrt(sum(d.^2)/length(d))};
 
 %% Table 1
 t1 = ones(12,2 + 2*length(stats_name));
@@ -60,6 +62,30 @@ for keyN=deltaResults.keys
     end
 end
 
+%% Table 3
+t3 = ones(12,2 + 2*length(stats_name2));
+i = 0;
+for keyN=deltaResults.keys
+    n = keyN{1};
+    deltaResult = deltaResults(n);
+    optResult = optResults(n);
+
+    for keyK = deltaResult.keys
+        K = keyK{1};
+        i = i+1;
+        t3(i,1) = n;
+        t3(i,2) = K;
+        j = 3;
+        for fct=functions3
+            f = fct{1};
+            t3(i,j) = f(deltaResult(K));
+            t3(i,j+1) = f(optResult(K));
+            j = j+2;
+        end
+    end
+end
+
+
 %% LateX Writeout
 f = fopen(filename,'wt','n','UTF-8');
 
@@ -94,6 +120,27 @@ fprintf(f, '\\midrule\n');
 %% Data2
 for i=1:12
     data = t2(i,:);
+    key = sprintf('$(%d,%d)$',data(1),data(2));
+    data = data(3:end);
+    data = arrayfun(@(x) sprintf('%2.3f',x),data,'UniformOutput',0);
+    vals = strcat(' & \\num{', strjoin(data, '} & \\\\num{'), '}\\\\\n');
+    fprintf(f,strcat(key,vals));
+end
+%% Bottom
+fprintf(f, '\\bottomrule\n');
+fprintf(f, '\\end{tabular}\n');
+
+%% Table3
+fprintf(f, '\\\\[3em]\n');
+fprintf(f, sprintf('\\\\begin{tabular}{%s}\n',repmat('l',1,1 + 2*length(stats_name3))));
+fprintf(f, '\\toprule\n');
+fprintf(f, strcat('& \\multicolumn{2}{c}{', strjoin(stats_name3, '} & \\\\multicolumn{2}{c}{'), '}\\\\\n'));
+fprintf(f, strcat('$(n,K)$',repmat('& Delta & Optimal ',1,length(stats_name3)),'\\\\\n'));
+fprintf(f, '\\midrule\n');
+
+%% Data3
+for i=1:12
+    data = t3(i,:);
     key = sprintf('$(%d,%d)$',data(1),data(2));
     data = data(3:end);
     data = arrayfun(@(x) sprintf('%2.3f',x),data,'UniformOutput',0);
