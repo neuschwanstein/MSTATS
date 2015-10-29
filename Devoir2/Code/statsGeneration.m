@@ -14,7 +14,7 @@ stats_name3 = {'Min.','VaR 99\\%%', 'RMSE'};
 
 functions = {@mean,@median,@std};
 functions2 = {@skewness,@kurtosis,@max};
-functions3 = {@min, @(d) quantile(d,0.99), @(d) sqrt(sum(d.^2)/length(d))};
+functions3 = {@min, @(d) quantile(d,0.01), @(d) sqrt(sum(d.^2)/length(d))};
 
 %% Table 1
 t1 = ones(12,2 + 2*length(stats_name));

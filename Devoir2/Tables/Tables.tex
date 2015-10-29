@@ -1,4 +1,4 @@
-\documentclass[10pt]{article}
+\documentclass[12pt,fleqn]{article}
 
 \usepackage[utf8]{inputenc}
 %\usepackage[latin1]{inputenc}
@@ -10,22 +10,440 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{siunitx}
+\usepackage{inconsolata}
+\usepackage{graphicx}
+
+\DeclareMathOperator{\gam}{Gamma}
+
+\title{\textit{Devoir 2}\\Évaluation statistique des erreurs de réplication par
+  couverture delta et couverture optimale} 
+
+\date{HEC Montréal\\[4em]Le 29 octobre 2015} 
+
+\author{Thierry \textsc{Bazier-Matte} \and Yann \textsc{Foucault} \and Annalaura
+  \textsc{Capuano} \and Mohammed \textsc{Huzeyen} \and Qing \textsc{Yu}}
 
 \begin{document}
 
+\maketitle
+
+\section*{Introduction}
+
+L'émission d'options de vente sur des actifs financiers comme des actions est rendu
+extrêmement fréquents, et de grosses sommes sont allouées dans ce type de commerce. il est
+donc essentiel pour l'émetteur d'une telle option de vente de considérer de quelle facon
+il peut répliquer la valeur de l'option de manière prévisible, afin de pouvoir essuyer le
+payoff possiblement élevé qu'il devra payer à l'acheteur si l'option finit dans la
+monnaie.
+
+Nous ferons donc une analyse statistique des pertes possibles suivant l'émission d'une
+telle option de vente. Nous étudierons particulièrement la méthode delta, basée sur le
+mouvement brownien géométrique des prix, ainsi que la méthode optimale elle aussi concue
+avec la théorie Black Scholes. En fait, chacune des deux méthodes, dans un contexte Black
+Scholes doivent tendre vers une erreur nulle lorsqu'on considère un rebalancement
+infini. Ce n'est bien sûr pas le cas en réalité et nous tiendrons donc compte de la
+fréquence des rebalancements du portefeuille de réplication. Nous allons également
+considérer les cas où l'option commence à, hors, ou dans la monnaie. 
+
+Toutefois, il est connu que le modèle Black Scholes est trop simpliste pour représenter
+fidèlement la réalité, et ainsi nous allons également considérer un modèle alternatif
+variance gamma afin de déterminer comment se comporte les stratégies de couverture dans un
+contexte différent de celui dans lequel elles ont été créées. 
+
+\section*{Question 1}
+
+Nous avons codé une fonction de type 
+\begin{equation*}
+  \verb+Fonction [V] = hedging (X, K, r, T, mu, sigma, put)+
+\end{equation*}
+composée des paramètres suivants:
+\begin{itemize}
+\item \verb+X+: Matrice de prix, où les rangées représentent les observations et les colonnes
+  les simulations;
+\item \verb+K+: Prix de levée de l'option;
+\item \verb+r+: Taux annuel sans risque;
+\item \verb+T+: \'Echeance de l'option;
+\item \verb+sigma+: Volatilité du sous-jacent;
+\item \verb+put+: booléen numérique représentant le type d'option à couvrir.
+\end{itemize}
+
+Voici le code de la fonction en question:
+\small{
+\begin{equation*}
+  \left.
+    \begin{array}{l}
+       \verb|function V = hedging(S,K,r,T,mu,sigma,put)|\\
+      \verb|[n,~] = size(S);                        % S: nxN|\\
+      \verb|beta = diag(exp(-r*linspace(0,T,n)));   % discount factor diagonal|\\
+      \verb|discountS = beta*S;                     % Discounted prices.|\\
+      \verb|Delta = discountS(2:end,:) - discountS(1:end-1,:);|\\
+      \verb|T = linspace(T,0,n)';|\\
+      \verb|[phiCall, phiPut] = blsdeltam(S(1:end-1,:),K,r,T(1:end-1),sigma);|\\
+      \verb|[V0Call, V0Put] = blspricem(S(1),K,r,T(1),sigma);|\\
+      \verb||\\
+      \verb|if ~put|\\
+      \verb|    V = V0Call + sum(phiCall.*Delta,1)';|\\
+      \verb|else|\\
+      \verb|    V = V0Put + sum(phiPut.*Delta,1)';|\\
+      \verb|end|\\
+      \verb|end|\\
+    \end{array}\right.
+\end{equation*}}
+
+Cette fonction retourne la valeur actualisée du portefeuille de couverture selon chacun
+des scénarios présents dans la matrice \verb+X+ en employant une méthode de couverture
+delta. 
+
+La valeur du portefeuille est alors donnée par
+\begin{equation*}
+  V = V_0 + \sum_{i=1}^n \phi_k \Delta_k,
+\end{equation*}
+ce qui se traduit dans le contexte algorithmiquement par 
+\begin{equation*}
+  \verb!V = V0Put + sum(phiPut.*Delta,1)';!
+\end{equation*}
+Ici, $V_0$ est simplement la valeur de l'option vendue sous la modèle de Black-Scholes. La
+matrice \verb+phiPut+ représente quant à elle l'évaluation du delta de l'option à chaque
+observation effectuée sur le prix du sous-jacent, pour chacun des scénarios, alors que
+\verb+Delta+ est le changement de prix actualisés (à référence $t=0$) du sous-jacent entre
+chacune des observations, ce qui représente effectivement une application directe du
+rebalancement delta. 
+
+\section*{Question 2}
+
+Dans un premier temps nous adoptons le modèle de Black Scholes pour générer $N$
+trajectoires possibles de prix selon l'équation suivante:
+\begin{equation*}
+  S_t = S_0 \exp\left(\left(\mu - \frac{\sigma^2}{2}\right)t + \sigma W_t\right),
+\end{equation*}
+où $W_t$ est un mouvement brownien.
+
+La fonction \verb+generateBSPrice+ retourne alors une matrice $n\times N$ de $n$
+observations et de $N$ trajectoire prix selon les divers paramètres nécessaires. Voici son
+implantation:
+\begin{equation*}
+  \left.
+    \begin{array}{l}
+      \verb|function S = generateBSPrices(S0,mu,sigma,T,n,N)|\\
+      \verb|% T: length of the observation|\\
+      \verb|% n: number of observations|\\
+      \verb|% N: number of trajectories|\\
+      \verb||\\
+      \verb|h = T/n;|\\
+      \verb|mean = h*(mu - sigma^2/2);|\\
+      \verb|vol = sqrt(h)*sigma;|\\
+      \verb|X = normrnd(mean,vol,n,N);|\\
+      \verb|X = [zeros(1,N); X];|\\
+      \verb|S = S0*exp(cumsum(X));|\\
+      \verb|end|\\
+    \end{array}
+  \right.
+\end{equation*}
+Nous employons ici le fait que les rendements sous l'hypothèse Black Scholes sont iid et
+de loi 
+\begin{equation*}
+  R_k = h\left(\mu - \frac{\sigma^2}{2}\right) + \sigma\sqrt{h}Z,
+\end{equation*}
+où $Z\sim N(0,1)$ une normale centrée réduite et $h=T/n$.  
+
+Pour mesurer l'efficacité de la couverture optimale, nous avons également mis au point une
+fonction \verb+optHedging+, mais qui appelle la fonction compilée
+\verb+Hedging_IID_MC2012+. Cette fonction prend comme entrée les mêmes paramètres que
+\verb+hedging+, avec en plus un booléen \verb+gamma+ qui indique la nature du modèle
+employée (variance gamma ou BMS):
+\begin{equation*}
+  \left.
+    \begin{array}{l}
+      \verb|function V = optHedging(S,K,r,T,mu,sigma,put,gamma)|\\
+\verb|m = 2000;|\\
+\verb|[n,N] = size(S);|\\
+\verb|h = T/n;|\\
+\verb|beta = diag(exp(-r*linspace(0,T,n)));|\\
+\verb|S = beta*S;  |\\
+\verb|Delta = S(2:end,:) - S(1:end-1,:);|\\
+\verb||\\
+\verb|nTraining = 10000;|\\
+\verb|if ~gamma|\\
+\verb|    % BMS |\\
+\verb|    mean = h*(mu - r - sigma^2/2);|\\
+\verb|    vol = sqrt(h)*sigma;|\\
+\verb|    R = normrnd(mean,vol,nTraining,1);|\\
+\verb|else|\\
+\verb|    % Variance Gamma returns|\\
+\verb|    mean = h*(mu - r - sigma^2/2);|\\
+\verb|    V = gamrnd(h,1,nTraining,1);|\\
+\verb|    Z = normrnd(0,1,nTraining,1);|\\
+\verb|    G = sqrt(V).*Z;|\\
+\verb|    R = mean + sigma*G;|\\
+\verb|end|\\
+\verb||\\
+\verb|minS = min(min(S));|\\
+\verb|maxS = max(max(S));|\\
+\verb|[~,C,a,c1,~] = Hedging_IID_MC2012(R,T,K,r,n,put,minS,maxS,m);|\\
+\verb|V = zeros(N,1);|\\
+\verb|V0 = interpolation_1d(S(1,1),C(1,:)',minS,maxS);|\\
+\verb||\\
+\verb|for i=1:N|\\
+\verb|    pi = V0;|\\
+\verb||\\
+\verb|    for k=1:n-1|\\
+\verb|        ak = interpolation_1d(S(k,i),a(k,:)',minS,maxS);|\\
+\verb|        phi = (ak - c1*pi)/S(k,i);|\\
+\verb|        pi = pi + phi*Delta(k,i);|\\
+\verb|    end|\\
+\verb||\\
+\verb|    V(i) = pi;|\\
+\verb|end|\\
+\verb|end|\\
+    \end{array}
+  \right.
+\end{equation*}
+
+Comme on peut le voir, cette fonction calcule dans un premier temps les paramètres
+`hors-ligne' nécessaires à l'évaluation de la couverture optimale à partir de
+\verb+nTraining=10000+ rendements iid, puis évalue les paramètres $C,a$ et $c_1$ en
+utilisant une grille de 2000 points.
+
+Enfin, on détermine récursivement la valeur du portefeuille de réplication à échéance à
+partir du paramètre $\phi_k$ indiquant le nombre de positions à acheter suivant la formule 
+\begin{equation*}
+  \phi_k = \frac{a_k(\tilde S_{k-1}) - \hat c_1 \tilde \pi_{k-1}}{\tilde S_{k-1}}.
+\end{equation*}
+La valeur de $a_k(\tilde S_{k-1})$ est interpolée à l'aide de la fonction compilée
+\verb+interpolation_1d+. 
+
+\subsection*{Commentaires et résultats}
+
+Les résultats statistiques suivants ont été générés à partir des paramètres suivants:
+\begin{table}[h]
+  \centering
+  \begin{tabular}[h]{ll}
+    % \toprule
+    $r$ & $0.02$\\
+    $S_0$ & $100$\\
+    $\mu$ & $0.5$\\
+    $T$ & $1$\\
+    $K$ & $\{95,100,105\}$\\
+    $n$ & $\{5,21,63,252\}$\\
+    % \bottomrule
+  \end{tabular}
+  \caption{Paramètres de test}
+  \label{tab:1}
+\end{table}
+
+La Table 2 présente les résultats pour les différentes combinaisons de $K$ et $n$ (cette
+table a d'ailleurs été générée automatiquement à l'aide de la fonction
+\verb+statsGeneration+). 
 \begin{table}
-\include{BMSTable}
-\caption{Statistiques pour strat\'egies de couvertures pour des prix suivant une loi
+\footnotesize{\include{BMSTable}}
+\caption{Statistiques pour stratégies de couvertures pour des prix suivant une loi
   log-normale (BMS)}
 \end{table}
 
-\newpage
+Enfin, la figure 1 présente les évaluations de densité d'erreur pour chacune des
+combinaisons de $K$ et $n$. Ces figures ont été générées par le script
+\verb+figureGeneration+, à l'aide de la fonction \verb+ksdensity+ de Matlab. A noter que
+cette figure est également disponible individuellement en pièce jointe à ce document
+(\verb+BMSHedging.pdf+). 
+\begin{figure}
+  \centering
+  \includegraphics[angle=90,scale=0.5]{BMSHedging}
+  \caption{Densité de probabilité d'erreur de couverture avec rendements BMS}
+  \label{fig:1}
+\end{figure}
+
+On observe que l’erreur de couverture moyenne est supérieure lorsqu’on utilise une
+couverture par delta que lorsqu’on utilise une couverture optimale. Par delta, l’erreur
+est très grande lorsqu’on effectue seulement 5 rebalancements en un an. En effet, lorsque
+$K=100$ et $S = 100$ (option à la monnaie), la valeur du put est de 6 à 7\$ environ (selon
+les simulations). Une erreur de 2 ou 3 dollars représente une erreur de près de 50\%, ce
+qui est énorme. Ceci est cohérent avec les constats empiriques connus, selon lesquels le
+`delta-hedging' nécessite de fréquents rebalancements (ce qui est coûteux en termes de
+frais de transactions) pour être efficace. Et de fait, l’erreur diminue avec les
+rebalancements, jusqu’à atteindre – 0.045 (cas de l’option à la monnaie) lorsqu’on
+rebalance chaque jour. C’est une erreur inférieure à 1\%, ce qui semble raisonnable.
+
+De ce point de vue, la couverture optimale semble beaucoup plus efficace et s’annonce
+moins coûteuse puisqu’elle permet une erreur de couverture inférieure à 0.5\%, et ce, avec
+seulement 5 rebalancements. Augmenter le nombre de rebalancements rend l’erreur quasi
+infime.
+
+Si maintenant, pour un nombre de rebalancements donné, on compare les 3 cas: en jeu
+($K= 95$), à la monnaie ($K = 100$) et hors-jeu (K = 105), l’erreur grossit à mesure qu’on
+sort de la monnaie, quand on suit une stratégie basée sur le delta. Elle est d’environ
+50\% plus grande à $K = 105$ qu’à $K = 95$ (\num{-0.689} contre \num{-0.434} par exemple,
+dans le cas de 63 rebalancements par an, donc un rebalancement tous les 4 jours
+environ). Ceci est possiblement lié au fait que le delta d’un put passe de \num{-1} à 0 à
+mesure qu’on sort de la monnaie. Le lien entre le sous-jacent et l’option se distend donc
+et, logiquement, on peut s’attendre à ce qu’une stratégie de couverture basée sur ce lien
+soit de moins en moins efficace.
+
+Lorsqu’on effectue une couverture de type optimal, le phénomène s’observe seulement
+lorsque les rebalancements sont rares ($n = 5$). Dès que les rebalancements s’accélèrent,
+le phénomène disparaît, ce qui confirme l’efficacité de cette stratégie.
+
+Toutefois, si l’on observe les écarts-types, ils augmentent à mesure qu’on sort de la
+monnaie, y compris pour ce type de stratégie de type optimal. Il semble donc
+intrinsèquement plus difficile, et ce, quelle que soit la stratégie de couverture choisie,
+de couvrir une option hors de la monnaie qu’une option en jeu.
+
+L’écart-type (\textit{volatilité} dans le Tableau) de l’erreur est nettement supérieur
+sous stratégie delta que sous couverture de type optimale. Ceci confirme la supériorité de
+la stratégie de type optimal. Ceci confirme également la nécessité des rebalancements
+fréquents si l’on se couvre par stratégie de couverture de type delta. En effet, avec 5
+rebalancements, non seulement l’erreur moyenne est élevée comme on a vu plus haut, mais
+l’écart-type lui-même l’est. En moyenne, on a une erreur de 2.5\$ sur 6\$ à 7\$ environ;
+mais en plus, en moyenne, l’erreur s’écarte de 2.468\$ de cette moyenne. Le risque est
+donc élevé d’être à 70\% ou 80\% découvert. Encore une fois, sans rebalancement fréquent, il
+faudrait être bien téméraire pour se couvrir par delta. Même à 21 rebalancements annuels,
+soit environ 2 par mois, l’écart-type de l’erreur est d’environ 1\$ soit environ 15\% de la
+valeur de l’option (option à la monnaie).
+
+Le fait que l’erreur de couverture diminue à mesure que la fréquence de rebalancement
+augmente se reflète également dans l’erreur-type (RMSE) qui diminue à mesure que n
+augmente.
+
+Trois statistiques nous obligent à apporter un léger bémol dans une comparaison couverture
+par delta vs. couverture de type optimal: aplatissement, asymétrie et minimum. Pour ces
+trois statistiques, la couverture dite optimale présente de moins bonnes
+caractéristiques: davantage leptokurtique, cette couverture a des queues plus épaisses et
+plus grand risque d’événements, certes rares, mais très négatif. Ceci est confirmé par une
+asymétrie négative et des minima plus grands (en valeur absolue). Ceci se remarque
+également visuellement dans les graphiques ci-dessous: graphiques en dents-de-scie de la
+fonction de densité de l’erreur de couverture dite optimale (par exemple, $n = 63, K =100$),
+avec une `dent' à gauche qui dépasse de la cloche normale; ou longueur des queues de
+couleur rouge dans nombre de graphiques. 
+
+Toutefois, ces statistiques sont moins décisives que la moyenne et l’écart-type, et la
+couverture de type optimal semble définitivement plus performante, même si elle n’est pas
+absolument sans risque. 
+
+
+\section*{Question 3}
+
+Dans cette question, nous reprenons la même analyse qu'à la précédente section, en
+employant cette fois un modèle variance gamma d'évolution des prix. Ceux-ci obéissent
+alors à la loi
+\begin{equation*}
+  S_t = S_0\exp\left(\left(\mu - \frac{\sigma^2}{2}\right)t + \sigma G_t\right),
+\end{equation*}
+où $G_t-G_s$ suit une loi $\sqrt{V}Z$, avec $Z\sim N(0,1)$ et $V\sim\gam(t-s,1)$,
+indépendants l'un à l'autre. 
+
+Selon Madan et al. (1998), 
+\begin{equation*}
+  R_k = \left(\mu - \frac{\sigma^2}{2}\right) \frac{T}{n} +
+  \frac{\sigma}{\sqrt{2\alpha}}(Y_{1,k} - Y_{2,k})
+\end{equation*}
+est l'expression générale pour les rendements excédentaires iid. On alors
+\begin{equation*}
+  R_k = \left(\mu - \frac{\sigma^2}{2}\right)\frac{T}{n} + \sigma\sqrt{V}Z.
+\end{equation*}
+Si $\alpha=1$, alors on voit que les rendements annuels suivent une loi de Laplace, ce qui
+revient à une différence de deux variables aléatoires de loi exponentielle. On en conclut
+que $G_1$ suit une loi exponentielle. 
+
+Algorithmiquement, la fonction \verb+generateGammaPrices+ produit une matrice de prix de
+lois variance gamma:
+\begin{equation*}
+  \left.
+    \begin{array}{l}
+      \verb|function S = generateGammaPrices(S0,mu,sigma,T,n,N)|\\
+      \verb|h = T/n;|\\
+      \verb|mean = h*(mu - sigma^2/2);|\\
+      \verb|V = gamrnd(h,1,n,N);|\\
+      \verb|Z = normrnd(0,1,n,N);|\\
+      \verb|G = sqrt(V).*Z;|\\
+      \verb|X = mean + sigma*G;|\\
+      \verb|X = [zeros(1,N); X];|\\
+      \verb|S = S0*exp(cumsum(X));|\\
+      \verb|end|\\
+    \end{array}
+  \right.
+\end{equation*}
+
+\subsection*{Commentaires et résultats}
+
+Les statistiques suivantes sont générés à partir des paramètres suivants:
+\begin{table}[h]
+  \centering
+  \begin{tabular}[h]{ll}
+    % \toprule
+    $r$ & $0.02$\\
+    $S_0$ & $100$\\
+    $\mu$ & $0.3$\\
+    $T$ & $1$\\
+    $K$ & $\{95,100,105\}$\\
+    $n$ & $\{5,21,63,252\}$\\
+    % \bottomrule
+  \end{tabular}
+  \caption{Paramètres de test pour les prix Variance Gamma}
+  \label{tab:1}
+\end{table}
+
+La Table 4 présente les diverses statistiques calculées pour chacune des combinaisons de
+paramètres, de la même facon à la Figure 2 en ce qui concerne la densité des erreurs de
+couverture. 
 
 \begin{table}
-\include{GammaTable}
+\footnotesize{\include{GammaTable}}
 \caption{Statistiques pour stratégies de couvertures pour des prix suivant une loi
   variance gamma}
 \end{table}
+
+\begin{figure}
+  \centering
+  \includegraphics[angle=90,scale=0.5]{GammaHedging}
+  \caption{Densité de probabilité d'erreur de couverture avec rendements BMS}
+  \label{fig:1}
+\end{figure}
+
+Cette fois, la méthode la plus efficace est disputée. En effet, au niveau de la moyenne,
+on observe clairement de meilleures performances du côté du rebalancement optimal qui
+conserve, en général, peu importe le nombre de rebalancements, des moyennes de l'ordre de
+\num{e-2}, alors que la méthode delta semble stagner à un ordre de grandeur plus élevé. 
+
+Au niveau de la médiane, qui caractérise la valeur qui est la plus vraisemblable, la
+méthode optimale offre une relative stabilité par rapport au nombre de rebalancements,
+alors que la méthode delta a tendance à offrir des performances dégradées à mesure que le
+nombre de rebalancement augmente.
+
+Pour ce qui est de l'écart-type des résultats, ie. la volatilité, encore une fois, la
+méthode optimale offre en général des valeurs plus serrées que la méthode delta. Aucune
+des deux méthode par contre ne semble bénéficier ou souffrir d'une fréquence faible ou
+élevée de rebalancements. 
+
+L'asymétrie est assez frappante chez les deux types de méthodes, car on remarque
+graphiquement une asymétrie négative. De plus, comme on le voit par la statistique Min.,
+cette asymétrie semble aller chercher des valeurs encore plus faibles lorsque l'option est
+hors de la monnaie, ie. $K>S_0$. 
+
+La mesure de kurtose est également intéressante, car elle trahit une distribution très
+étalée de l'erreur, qui est d'ailleurs souligné par la mesure de la VaR, qui indique
+effectivement que le premier percentile est extrêmement élevé, particulièrement pour la
+méthode delta qui indique une VaR deux fois plus élevée que celle de la méthode optimale.
+
+Donc, bien qu'aucune des deux méthodes ne semble particulièrement performante, la méthode
+optimale demeure tout de même la méthode qui serait à privilégier dans un contexte où les
+rendements sont suspectés ne pas être de nature brownienne. 
+
+
+\section*{Conclusion}
+
+Si l’on suppose que les rendements sont gaussiens et suivent une loi lognormale (voir
+Question 2), une couverture de type optimal couvre nettement mieux qu’une couverture de
+type delta. Elle offre une couverture très bonne (erreur moyenne et écart-type des erreurs
+minimes) même avec une fréquence de rebalancement très faible. Elle n’est toutefois pas
+sûre à 100\% et présente même de plus longues queues et des minima plus petits (plus
+proche de moins l’infini) que la couverture par delta.
+
+Même au niveau d'un modèle variance gamma, le rebalancement optimal demeure la `moins pire
+des options'. Mais il est essentiel de comprendre que ni l'une ni l'autre n'offre de
+performance vraiment convaincante, bien que leur moyenne semble tendre plus ou moins vers
+0. Toutefois, ce qu'on remarque c'est que des rebalancements fréquents n'offrent pas
+nécessairement une protection supplémentaire et qu'en ce sens, dans un contexte où des
+frais aux transactions sont appliqués, des rebalancements moins fréquents pourraient être
+plus avantageux pour l'émissaire d'une option de vente. 
 
 
 \end{document}
