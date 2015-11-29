@@ -1,0 +1,96 @@
+\documentclass[12pt,fleqn]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{rotating}
+\usepackage{booktabs}
+\usepackage{empheq}
+\usepackage{geometry}
+\usepackage{parskip}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{siunitx}
+\usepackage{inconsolata}
+\usepackage{graphicx}
+\usepackage{rotating}
+\usepackage{multirow}
+\usepackage{pdflscape}
+
+\DeclareMathOperator{\gam}{Gamma}
+
+\title{\textit{Devoir 3}\\Tarification Montecarlo d'options sous modèle GARCH et analyse statistique}
+
+\date{HEC Montréal\\[4em]Le premier décembre 2015}
+
+\author{Thierry \textsc{Bazier-Matte} \and Yann \textsc{Foucault} \and Annalaura
+  \textsc{Capuano} \and Mohammed \textsc{Huzeyen} \and Qing \textsc{Yu}}
+
+\begin{document}
+
+\maketitle
+
+% \begin{landscape}
+\newpage
+\newgeometry{bottom=2cm}
+\thispagestyle{empty}
+
+\begin{sidewaystable}
+\caption{Prix et statistiques avec paramètres de Duan}
+\bigskip
+\begin{tabular}{llrrrrrrrrrr}
+\toprule
+& & B-S & \multicolumn{9}{c}{GARCH}\\
+\cmidrule{4-12}
+Maturity & $s/x$ && \multicolumn{3}{c}{$\sqrt{h_1}/\sigma = 0.8$} & \multicolumn{3}{c}{$\sqrt{h_1}/\sigma = 1.0$} & \multicolumn{3}{c}{$\sqrt{h_1}/\sigma = 1.2$}\\
+& & Price & Price & \% bias & s.d. & Price & \% bias & s.d & Price & \% bias & s.d.\\
+\midrule
+\multirow{7}{*}{$T=30$} 
+\input{price30}
+\midrule
+\multirow{7}{*}{$T=90$}
+\input{price90}
+\midrule
+\multirow{7}{*}{$T=180$}
+\input{price180}
+\bottomrule
+\end{tabular}
+\end{sidewaystable}
+
+
+\newpage
+\newgeometry{bottom=3cm}
+\thispagestyle{empty}
+
+\begin{sidewaystable}[h!]
+\caption{Delta et statistiques avec paramètres de Duan}
+\bigskip
+\begin{tabular}{llrrrrrrrrrr}
+\toprule
+& & B-S & \multicolumn{9}{c}{GARCH}\\
+\cmidrule{4-12}
+Maturity & $s/x$ && \multicolumn{3}{c}{$\sqrt{h_1}/\sigma = 0.8$} & \multicolumn{3}{c}{$\sqrt{h_1}/\sigma = 1.0$} & \multicolumn{3}{c}{$\sqrt{h_1}/\sigma = 1.2$}\\
+& & Delta & Delta & \% bias & s.d. & Delta & \% bias & s.d & Delta & \% bias & s.d.\\
+\midrule
+\multirow{7}{*}{$T=30$} 
+\input{delta30}
+\midrule
+\multirow{7}{*}{$T=90$}
+\input{delta90}
+\midrule
+\multirow{7}{*}{$T=180$}
+\input{delta180}
+\bottomrule
+\end{tabular}
+\end{sidewaystable}
+% \end{landscape}
+
+% \newpage
+% \global\pdfpageattr\expandafter{\the\pdfpageattr/Rotate 0}
+% Hello. back to normal.
+
+
+
+\end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
